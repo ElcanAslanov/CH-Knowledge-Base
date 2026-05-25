@@ -98,7 +98,7 @@ export default function EditArticlePage() {
       const filePath = `articles/${fileName}`
 
       const { error: uploadError } = await supabase.storage
-        .from('article_files')
+        .from('knowledge_files')
         .upload(filePath, file, {
           upsert: true,
         })
@@ -109,7 +109,7 @@ export default function EditArticlePage() {
       }
 
       const { data } = supabase.storage
-        .from('article_files')
+        .from('knowledge_files')
         .getPublicUrl(filePath)
 
       await supabase.from('knowledge_article_files').insert([
