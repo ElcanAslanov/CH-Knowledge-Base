@@ -16,7 +16,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[#f7f7f8] text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
+      {/* <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto grid max-w-7xl grid-cols-[70px_1fr_70px] items-center px-4 py-5 md:grid-cols-[90px_1fr_90px] md:px-6">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
             <img
@@ -37,7 +37,7 @@ export default async function Home() {
 
           <div />
         </div>
-      </header>
+      </header> */}
 
       <section className="relative overflow-hidden bg-gradient-to-br from-red-700 via-red-600 to-red-500 text-white">
         <div className="absolute left-[8%] top-10 h-16 w-16 animate-pulse rounded-full bg-white/10" />
