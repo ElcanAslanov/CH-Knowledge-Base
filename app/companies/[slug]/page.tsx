@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
-import DOMPurify from 'isomorphic-dompurify'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -10,6 +9,35 @@ type PageProps = {
   params: Promise<{
     slug: string
   }>
+}
+
+const DEFAULT_COMPANY_DESCRIPTION =
+  'Bu bölmədə şirkət haqqında qısa məlumat, fəaliyyət istiqamətləri və daxili iş prinsipləri təqdim olunacaq.'
+
+function sanitizeHtml(html: string) {
+  return html
+    // Tam blok şəklində təhlükəli tag-ları silir
+    .replace(
+      /<\s*(script|style|iframe|object|embed|link|meta|base|form|input|button|textarea|select|option)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,
+      ''
+    )
+
+    // Tək bağlanan təhlükəli tag-ları silir
+    .replace(
+      /<\s*(script|style|iframe|object|embed|link|meta|base|form|input|button|textarea|select|option)[^>]*\/?\s*>/gi,
+      ''
+    )
+
+    // onclick, onerror, onload və s. event atributlarını silir
+    .replace(/\s+on[a-z]+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*'[^']*'/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*[^\s>]+/gi, '')
+
+    // javascript: linklərini zərərsizləşdirir
+    .replace(/\s+href\s*=\s*"javascript:[^"]*"/gi, ' href="#"')
+    .replace(/\s+href\s*=\s*'javascript:[^']*'/gi, " href='#'")
+    .replace(/\s+src\s*=\s*"javascript:[^"]*"/gi, ' src="#"')
+    .replace(/\s+src\s*=\s*'javascript:[^']*'/gi, " src='#'")
 }
 
 export default async function CompanyPage({ params }: PageProps) {
@@ -34,9 +62,9 @@ export default async function CompanyPage({ params }: PageProps) {
   if (categoriesError) {
     return <div>Error: {categoriesError.message}</div>
   }
-  const companyDescriptionHtml = DOMPurify.sanitize(
-    company.description ||
-    'Bu bölmədə şirkət haqqında qısa məlumat, fəaliyyət istiqamətləri və daxili iş prinsipləri təqdim olunacaq.'
+
+  const companyDescriptionHtml = sanitizeHtml(
+    company.description || DEFAULT_COMPANY_DESCRIPTION
   )
 
   return (
@@ -50,7 +78,10 @@ export default async function CompanyPage({ params }: PageProps) {
           <div className="flex flex-col items-center text-center md:relative md:block">
             <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-xl md:absolute md:left-0 md:top-1/2 md:mb-0 md:h-20 md:w-20 md:-translate-y-1/2">
               <img
-                src={company.logo_url || 'https://www.magna.az/assets/img/icons/logo_red.png'}
+                src={
+                  company.logo_url ||
+                  'https://www.magna.az/assets/img/icons/logo_red.png'
+                }
                 alt={company.name}
                 className="h-11 w-auto object-contain md:h-14"
               />
@@ -66,7 +97,8 @@ export default async function CompanyPage({ params }: PageProps) {
               </h1>
 
               <p className="mx-auto mt-2 max-w-2xl text-xs leading-6 text-red-50 md:text-sm">
-                Şirkətə aid qaydalar, öhdəliklər, məsuliyyətlər, təlimatlar və daxili məlumatlar.
+                Şirkətə aid qaydalar, öhdəliklər, məsuliyyətlər, təlimatlar və
+                daxili məlumatlar.
               </p>
             </div>
           </div>
@@ -95,7 +127,7 @@ export default async function CompanyPage({ params }: PageProps) {
           </h2>
 
           <div
-            className="mt-5 max-w-4xl text-sm leading-8 text-slate-600 md:text-base [&_p]:mb-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-2 [&_strong]:font-bold"
+            className="mt-5 max-w-4xl text-sm leading-8 text-slate-600 md:text-base [&_p]:mb-4 [&_br]:block [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-2 [&_strong]:font-bold [&_b]:font-bold [&_em]:italic [&_a]:font-semibold [&_a]:text-red-600 [&_a]:underline"
             dangerouslySetInnerHTML={{ __html: companyDescriptionHtml }}
           />
         </div>
@@ -112,7 +144,8 @@ export default async function CompanyPage({ params }: PageProps) {
           </h2>
 
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-500">
-            Aşağıdakı bölmələrdə şirkətə aid qaydalar və məlumatlar yerləşdiriləcək.
+            Aşağıdakı bölmələrdə şirkətə aid qaydalar və məlumatlar
+            yerləşdiriləcək.
           </p>
         </div>
 
@@ -188,7 +221,8 @@ export default async function CompanyPage({ params }: PageProps) {
         <div className="border-t border-white/20 py-6">
           <div className="relative mx-auto flex h-8 w-full max-w-xl items-center justify-center overflow-hidden text-sm">
             <span className="relative z-10 whitespace-nowrap font-semibold text-white">
-              © 1995 – 2026 <span style={{ color: '#000000' }}>Cahan Holding.</span>
+              © 1995 – 2026{' '}
+              <span style={{ color: '#000000' }}>Cahan Holding.</span>
             </span>
 
             <span
