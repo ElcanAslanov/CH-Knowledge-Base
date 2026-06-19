@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import DOMPurify from 'isomorphic-dompurify'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -33,6 +34,10 @@ export default async function CompanyPage({ params }: PageProps) {
   if (categoriesError) {
     return <div>Error: {categoriesError.message}</div>
   }
+  const companyDescriptionHtml = DOMPurify.sanitize(
+    company.description ||
+    'Bu bölmədə şirkət haqqında qısa məlumat, fəaliyyət istiqamətləri və daxili iş prinsipləri təqdim olunacaq.'
+  )
 
   return (
     <main className="min-h-screen bg-[#f7f7f8] text-slate-900">
@@ -89,10 +94,10 @@ export default async function CompanyPage({ params }: PageProps) {
             Qısa məlumat
           </h2>
 
-          <p className="mt-5 max-w-4xl text-sm leading-8 text-slate-600 md:text-base">
-            {company.description ||
-              'Bu bölmədə şirkət haqqında qısa məlumat, fəaliyyət istiqamətləri və daxili iş prinsipləri təqdim olunacaq.'}
-          </p>
+          <div
+            className="mt-5 max-w-4xl text-sm leading-8 text-slate-600 md:text-base [&_p]:mb-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-2 [&_strong]:font-bold"
+            dangerouslySetInnerHTML={{ __html: companyDescriptionHtml }}
+          />
         </div>
       </section>
 
