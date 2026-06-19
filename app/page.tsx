@@ -172,7 +172,7 @@ export default async function Home() {
           <div>
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white">
               <img
-                src="https://www.magna.az/assets/img/icons/logo_red.png"
+                src="https://cahan.az/wp-content/uploads/elementor/thumbs/FOOTER-AZ.-png-rjko6zxaos7x3st6em3kzr2jg31x9jxnvnel33xxxk.png"
                 alt="Cahan Holding"
                 className="h-14 w-auto object-contain"
               />
