@@ -11,21 +11,78 @@ export default function AdminArticlesPage() {
   const loadArticles = async () => {
     setLoading(true)
 
-    const { data, error } = await supabase
+    const { data: articleData, error: articleError } = await supabase
       .from('knowledge_articles')
       .select(`
         *,
-        company:knowledge_companies(name, slug),
         category:knowledge_categories(name, slug)
       `)
       .order('created_at', { ascending: false })
 
-    if (error) {
-      alert(error.message)
-    } else {
-      setArticles(data || [])
+    if (articleError) {
+      alert(articleError.message)
+      setLoading(false)
+      return
     }
 
+    const articleIds = (articleData || []).map((article: any) => article.id)
+
+    if (articleIds.length === 0) {
+      setArticles([])
+      setLoading(false)
+      return
+    }
+
+    const { data: relationData, error: relationError } = await supabase
+      .from('knowledge_article_companies')
+      .select('article_id, company_id')
+      .in('article_id', articleIds)
+
+    if (relationError) {
+      alert(relationError.message)
+      setArticles(articleData || [])
+      setLoading(false)
+      return
+    }
+
+    const companyIds = Array.from(
+      new Set((relationData || []).map((item: any) => item.company_id))
+    ).filter(Boolean)
+
+    let companyMap: Record<string, any> = {}
+
+    if (companyIds.length > 0) {
+      const { data: companyData, error: companyError } = await supabase
+        .from('knowledge_companies')
+        .select('id, name, slug')
+        .in('id', companyIds)
+
+      if (companyError) {
+        alert(companyError.message)
+      } else {
+        companyMap = (companyData || []).reduce((acc: any, company: any) => {
+          acc[company.id] = company
+          return acc
+        }, {})
+      }
+    }
+
+    const finalArticles = (articleData || []).map((article: any) => {
+      const articleRelations = (relationData || []).filter(
+        (relation: any) => relation.article_id === article.id
+      )
+
+      const companies = articleRelations
+        .map((relation: any) => companyMap[relation.company_id])
+        .filter(Boolean)
+
+      return {
+        ...article,
+        companies,
+      }
+    })
+
+    setArticles(finalArticles)
     setLoading(false)
   }
 
@@ -37,6 +94,16 @@ export default function AdminArticlesPage() {
     const ok = confirm('Bu məqaləni silmək istədiyinizə əminsiniz?')
 
     if (!ok) return
+
+    await supabase
+      .from('knowledge_article_companies')
+      .delete()
+      .eq('article_id', id)
+
+    await supabase
+      .from('knowledge_article_files')
+      .delete()
+      .eq('article_id', id)
 
     const { error } = await supabase
       .from('knowledge_articles')
@@ -59,6 +126,7 @@ export default function AdminArticlesPage() {
           <h1 className="text-3xl font-extrabold text-slate-900">
             Məqalələr
           </h1>
+
           <p className="mt-2 text-sm text-slate-500">
             Şirkətlərə və bölmələrə aid məlumatları buradan idarə edə bilərsiniz.
           </p>
@@ -90,12 +158,21 @@ export default function AdminArticlesPage() {
               className="grid gap-4 border-b border-slate-100 px-6 py-5 last:border-b-0 md:grid-cols-[1.3fr_1fr_1fr_120px_180px] md:items-center"
             >
               <div>
-                <h2 className="font-bold text-slate-900">{article.title}</h2>
-                <p className="mt-1 text-xs text-slate-500">{article.slug}</p>
+                <h2 className="font-bold text-slate-900">
+                  {article.title}
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  {article.slug}
+                </p>
               </div>
 
               <div className="text-sm text-slate-600">
-                {article.company?.name || '—'}
+                {article.companies?.length
+                  ? article.companies
+                      .map((company: any) => company.name)
+                      .join(', ')
+                  : '—'}
               </div>
 
               <div className="text-sm text-slate-600">

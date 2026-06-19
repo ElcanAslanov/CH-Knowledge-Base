@@ -18,7 +18,6 @@ export default function NewArticlePage() {
   const [content, setContent] = useState('')
 
   const [files, setFiles] = useState<FileList | null>(null)
-
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -26,17 +25,27 @@ export default function NewArticlePage() {
   }, [])
 
   const loadData = async () => {
-    const { data: comp } = await supabase
+    const { data: comp, error: compError } = await supabase
       .from('knowledge_companies')
       .select('*')
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
 
-    const { data: cat } = await supabase
+    if (compError) {
+      alert(compError.message)
+      return
+    }
+
+    const { data: cat, error: catError } = await supabase
       .from('knowledge_categories')
       .select('*')
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
+
+    if (catError) {
+      alert(catError.message)
+      return
+    }
 
     setCompanies(comp || [])
     setCategories(cat || [])
@@ -76,13 +85,19 @@ export default function NewArticlePage() {
         .from('knowledge_files')
         .getPublicUrl(filePath)
 
-      await supabase.from('knowledge_article_files').insert([
-        {
-          article_id: articleId,
-          file_name: file.name,
-          file_url: data.publicUrl,
-        },
-      ])
+      const { error: fileInsertError } = await supabase
+        .from('knowledge_article_files')
+        .insert([
+          {
+            article_id: articleId,
+            file_name: file.name,
+            file_url: data.publicUrl,
+          },
+        ])
+
+      if (fileInsertError) {
+        alert(fileInsertError.message)
+      }
     }
   }
 
@@ -94,15 +109,32 @@ export default function NewArticlePage() {
       return
     }
 
+    if (!categoryId) {
+      alert('Bölmə seçilməlidir')
+      return
+    }
+
+    if (!title.trim()) {
+      alert('Başlıq daxil edilməlidir')
+      return
+    }
+
+    if (!slug.trim()) {
+      alert('Slug daxil edilməlidir')
+      return
+    }
+
     setLoading(true)
+
+    const cleanSlug = slug.trim().toLowerCase()
 
     const { data: article, error } = await supabase
       .from('knowledge_articles')
       .insert([
         {
           category_id: categoryId,
-          title,
-          slug,
+          title: title.trim(),
+          slug: cleanSlug,
           content,
           is_active: true,
         },
@@ -126,6 +158,11 @@ export default function NewArticlePage() {
       .insert(relations)
 
     if (relationError) {
+      await supabase
+        .from('knowledge_articles')
+        .delete()
+        .eq('id', article.id)
+
       setLoading(false)
       alert(relationError.message)
       return
@@ -149,7 +186,7 @@ export default function NewArticlePage() {
           ← Məqalələrə qayıt
         </Link>
 
-        <h1 className="mt-6 text-3xl font-extrabold">
+        <h1 className="mt-6 text-3xl font-extrabold text-slate-900">
           Yeni Məqalə
         </h1>
 
@@ -160,7 +197,7 @@ export default function NewArticlePage() {
 
       <form
         onSubmit={handleSubmit}
-        className="max-w-3xl space-y-5 rounded-3xl border bg-white p-6 shadow-sm"
+        className="max-w-3xl space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
       >
         <div>
           <label className="mb-3 block text-sm font-semibold text-slate-700">
@@ -168,24 +205,30 @@ export default function NewArticlePage() {
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {companies.map((company) => {
-              const active = selectedCompanyIds.includes(company.id)
+            {companies.length > 0 ? (
+              companies.map((company) => {
+                const active = selectedCompanyIds.includes(company.id)
 
-              return (
-                <button
-                  type="button"
-                  key={company.id}
-                  onClick={() => toggleCompany(company.id)}
-                  className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
-                    active
-                      ? 'border-red-300 bg-red-50 text-red-700'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {company.name}
-                </button>
-              )
-            })}
+                return (
+                  <button
+                    type="button"
+                    key={company.id}
+                    onClick={() => toggleCompany(company.id)}
+                    className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                      active
+                        ? 'border-red-300 bg-red-50 text-red-700'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {company.name}
+                  </button>
+                )
+              })
+            ) : (
+              <p className="text-sm text-slate-500">
+                Aktiv şirkət tapılmadı.
+              </p>
+            )}
           </div>
 
           <p className="mt-2 text-xs text-slate-400">
@@ -193,44 +236,77 @@ export default function NewArticlePage() {
           </p>
         </div>
 
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="w-full rounded-xl border p-3"
-          required
-        >
-          <option value="">Bölmə seç</option>
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Bölmə
+          </label>
 
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50"
+            required
+          >
+            <option value="">Bölmə seç</option>
 
-        <input
-          placeholder="Başlıq"
-          className="w-full rounded-xl border p-3"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-        />
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <input
-          placeholder="Slug (məs: is-saatlari)"
-          className="w-full rounded-xl border p-3"
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          required
-        />
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Başlıq
+          </label>
 
-        <textarea
-          placeholder="Məqalə mətni"
-          rows={10}
-          className="w-full rounded-xl border p-3"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-        />
+          <input
+            placeholder="Başlıq"
+            className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Slug
+          </label>
+
+          <input
+            placeholder="Slug (məs: is-saatlari)"
+            className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            required
+          />
+
+          <p className="mt-2 text-xs text-slate-400">
+            URL üçün istifadə olunur. Məs: is-saatlari, mezuniyyet-qaydalari.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Məqalə mətni
+          </label>
+
+          <textarea
+            placeholder="Məqalə mətni"
+            rows={10}
+            className="w-full rounded-xl border border-slate-200 p-3 text-sm leading-7 outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+          />
+
+          <p className="mt-2 text-xs text-slate-400">
+            HTML tag-ları istifadə edə bilərsən: &lt;p&gt;, &lt;ul&gt;,
+            &lt;li&gt;, &lt;strong&gt; və s.
+          </p>
+        </div>
 
         <div>
           <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -241,7 +317,7 @@ export default function NewArticlePage() {
             type="file"
             multiple
             onChange={(e) => setFiles(e.target.files)}
-            className="w-full rounded-xl border p-3"
+            className="w-full rounded-xl border border-slate-200 p-3 text-sm"
           />
 
           <p className="mt-2 text-xs text-slate-400">
@@ -251,7 +327,7 @@ export default function NewArticlePage() {
 
         <button
           disabled={loading}
-          className="w-full rounded-xl bg-red-600 py-3 font-semibold text-white"
+          className="w-full rounded-xl bg-red-600 py-3 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? 'Yüklənir...' : 'Əlavə et'}
         </button>
